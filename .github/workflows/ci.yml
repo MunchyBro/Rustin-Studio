@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux:
+    name: Linux (build + all tests)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev libwayland-dev libdbus-1-dev libpipewire-0.3-dev libclang-dev \
+            libgbm-dev libegl1-mesa-dev libxcb-randr0-dev libxcb-shm0-dev libx11-dev \
+            libxi-dev libxtst-dev libxkbcommon-dev libxkbcommon-x11-dev \
+            ffmpeg mesa-vulkan-drivers libvulkan1 xvfb
+      - name: Build
+        run: cargo build --workspace --all-targets
+      - name: Test (needs ffmpeg, a virtual display and a software Vulkan driver, all installed above)
+        env:
+          XDG_RUNTIME_DIR: /tmp
+        run: xvfb-run -a cargo test --workspace
+
+  windows:
+    name: Windows (build + tests)
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: ffmpeg (for the media/stream tests)
+        run: choco install ffmpeg -y --no-progress
+      - run: cargo build --workspace --all-targets
+      - run: cargo test --workspace
+
+  macos:
+    name: macOS (build + tests)
+    runs-on: macos-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: ffmpeg (for the media/stream tests)
+        run: brew install ffmpeg
+      - run: cargo build --workspace --all-targets
+      - run: cargo test --workspace
