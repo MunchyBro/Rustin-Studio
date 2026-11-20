@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/rustin-studio-logo.png" alt="Rustin Studio logo" width="180" />
+  <img src="assets/rustin-studio-logo.svg" alt="Rustin Studio logo" width="180" />
 </p>
 
 # Rustin Studio
