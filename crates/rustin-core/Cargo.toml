@@ -1,0 +1,13 @@
+[package]
+name = "rustin-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+ab_glyph = "0.2"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+
+[dev-dependencies]
+serde_json = "1"

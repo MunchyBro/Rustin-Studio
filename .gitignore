@@ -1,0 +1,9 @@
+/target
+Cargo.lock.bak
+# local recordings and test output
+/recordings/
+*.y4m
+*.wav
+*.flv
+*.ts
+.DS_Store

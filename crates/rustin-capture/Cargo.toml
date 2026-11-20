@@ -1,0 +1,10 @@
+[package]
+name = "rustin-capture"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+rustin-core = { path = "../rustin-core" }
+xcap = "0.9"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }

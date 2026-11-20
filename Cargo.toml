@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = ["crates/rustin-core", "crates/rustin-output", "crates/rustin-app", "crates/rustin-capture", "crates/rustin-audio", "crates/rustin-hotkeys", "crates/rustin-gpu", "crates/rustin-gui"]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2021"
+license = "GPL-2.0-or-later"
+
+[profile.release]
+opt-level = 3
+lto = true

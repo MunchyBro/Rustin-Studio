@@ -1,0 +1,10 @@
+[package]
+name = "rustin-gpu"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+rustin-core = { path = "../rustin-core" }
+wgpu = "22"
+pollster = "0.3"

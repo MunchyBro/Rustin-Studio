@@ -1,0 +1,24 @@
+[package]
+name = "rustin-gui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "rustin_gui"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rustin-studio-gui"
+path = "src/main.rs"
+
+[dependencies]
+rustin-core = { path = "../rustin-core" }
+rustin-output = { path = "../rustin-output" }
+eframe = { version = "0.27", default-features = false, features = ["default_fonts", "glow", "x11"] }
+rustin-capture = { path = "../rustin-capture" }
+rustin-audio = { path = "../rustin-audio" }
+rustin-hotkeys = { path = "../rustin-hotkeys" }
+rustin-gpu = { path = "../rustin-gpu" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

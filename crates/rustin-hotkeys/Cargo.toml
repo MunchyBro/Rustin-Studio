@@ -1,0 +1,8 @@
+[package]
+name = "rustin-hotkeys"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+device_query = "4"
