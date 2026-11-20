@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Package (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: windows-x64, os: windows-latest }
+          - { name: linux-x64, os: ubuntu-24.04 }
+          - { name: macos, os: macos-latest }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: System packages (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev libwayland-dev libdbus-1-dev libpipewire-0.3-dev libclang-dev \
+            libgbm-dev libegl1-mesa-dev libxcb-randr0-dev libxcb-shm0-dev libx11-dev \
+            libxi-dev libxtst-dev libxkbcommon-dev libxkbcommon-x11-dev
+      - name: Build
+        run: cargo build --release -p rustin-gui -p rustin-app
+      - name: Package (Windows, with ffmpeg included)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dist = "Rustin-Studio-${{ matrix.name }}"
+          New-Item -ItemType Directory -Path $dist | Out-Null
+          Copy-Item target/release/rustin-studio-gui.exe $dist/
+          Copy-Item target/release/rustin-studio.exe $dist/
+          Copy-Item README.md, LICENSE $dist/
+          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip" -OutFile ffmpeg.zip
+          Expand-Archive ffmpeg.zip -DestinationPath ffmpeg-tmp
+          $bin = Get-ChildItem -Path ffmpeg-tmp -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+          Copy-Item $bin.FullName $dist/
+          Copy-Item (Join-Path $bin.DirectoryName "ffprobe.exe") $dist/
+          Copy-Item (Get-ChildItem -Path ffmpeg-tmp -Recurse -Filter LICENSE.txt | Select-Object -First 1).FullName "$dist/FFMPEG-LICENSE.txt"
+          Compress-Archive -Path $dist -DestinationPath "$dist.zip"
+      - name: Package (Linux / macOS)
+        if: runner.os != 'Windows'
+        run: |
+          dist="Rustin-Studio-${{ matrix.name }}"
+          mkdir "$dist"
+          cp target/release/rustin-studio-gui target/release/rustin-studio README.md LICENSE "$dist/"
+          tar czf "$dist.tar.gz" "$dist"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Rustin-Studio-${{ matrix.name }}
+          path: |
+            Rustin-Studio-*.zip
+            Rustin-Studio-*.tar.gz
+
+  publish:
+    name: Publish GitHub release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
