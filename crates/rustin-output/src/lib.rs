@@ -187,7 +187,7 @@ impl FfmpegOutput {
 impl Output for FfmpegOutput {
     fn start(&mut self, width: u32, height: u32, fps: u32) -> io::Result<()> {
         let mut cmd = ffmpeg_cmd();
-        cmd.args(["-y", "-loglevel", "error", "-use_wallclock_as_timestamps", "1", "-thread_queue_size", "512"])
+        cmd.args(["-y", "-loglevel", "error", "-use_wallclock_as_timestamps", "1"])
             .args(["-f", "rawvideo", "-pix_fmt", "rgba"])
             .args(["-s", &format!("{width}x{height}"), "-i", "-"])
             .args(["-r", &fps.to_string()])
