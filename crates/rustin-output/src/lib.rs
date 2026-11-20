@@ -211,9 +211,8 @@ impl Output for FfmpegOutput {
         self.stderr_reader = Some(thread::spawn(move || {
             let mut bytes = Vec::new();
             let _ = stderr.read_to_end(&mut bytes);
-            let text = String::from_utf8_lossy(&bytes);
-            let tail = if text.len() > 8192 { &text[text.len()-8192..] } else { &text };
-            if let Ok(mut saved) = stderr_text.lock() { *saved = tail.to_string(); }
+            let tail = if bytes.len() > 8192 { &bytes[bytes.len()-8192..] } else { &bytes[..] };
+            if let Ok(mut saved) = stderr_text.lock() { *saved = String::from_utf8_lossy(tail).to_string(); }
         }));
         // Roughly 64 MB of frames may wait for the encoder before new ones are dropped.
         let depth = (64 * 1024 * 1024 / (width as usize * height as usize * 4).max(1)).clamp(3, 30);
