@@ -1,0 +1,38 @@
+name: Extract uploaded Rustin Studio archive
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".extract-rustin-studio-trigger"
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Extract project into repository root
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f rustin-studio.zip
+          mkdir -p /tmp/rustin-studio-archive
+          unzip -q rustin-studio.zip -d /tmp/rustin-studio-archive
+          test -d /tmp/rustin-studio-archive/rustin-studio
+          cp -a /tmp/rustin-studio-archive/rustin-studio/. .
+          rm -rf /tmp/rustin-studio-archive rustin-studio rustin-studio.zip
+          rm -f .extract-rustin-studio-trigger
+          git add -A
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Add Rustin Studio project source"
+            git push origin main
+          fi
