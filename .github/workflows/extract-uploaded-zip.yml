@@ -27,6 +27,9 @@ jobs:
           unzip -q rustin-studio.zip -d /tmp/rustin-studio-archive
           test -d /tmp/rustin-studio-archive/rustin-studio
           cp -a /tmp/rustin-studio-archive/rustin-studio/. .
+          # The GitHub App cannot push workflow files; add those through the GitHub contents API after extraction.
+          rm -f .github/workflows/ci.yml .github/workflows/release.yml
+          rm -f 1
           rm -rf /tmp/rustin-studio-archive rustin-studio rustin-studio.zip
           rm -f .extract-rustin-studio-trigger
           git add -A
