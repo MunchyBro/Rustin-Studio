@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/rustin-studio-logo.png" alt="Rustin Studio logo" width="180" />
+</p>
+
 # Rustin Studio
 
 An OBS-style screen recorder and scene compositor written in Rust. GPL-2.0-or-later.
