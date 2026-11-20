@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     branches: [main]
-    paths: [".github/workflows/release.yml"]
+    paths: [".github/workflows/release.yml", "crates/rustin-output/src/lib.rs"]
   workflow_dispatch:
 
 env:
@@ -78,6 +78,6 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: dist/*
-          tag_name: v1.0.0
+          tag_name: v1.0.1
           target_commitish: main
           generate_release_notes: true
