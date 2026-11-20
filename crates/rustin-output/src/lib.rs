@@ -10,13 +10,13 @@ pub use rtmp::{container_for, RtmpOutput, StreamStats};
 use rustin_core::Frame;
 use std::{
     fs::File,
-    io::{self, BufWriter, Write},
+    io::{self, BufWriter, Read, Write},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     sync::{
         atomic::{AtomicBool, AtomicU64, Ordering},
         mpsc::{sync_channel, SyncSender, TrySendError},
-        Arc,
+        Arc, Mutex,
     },
     thread::{self, JoinHandle},
     time::{Duration, Instant},
@@ -149,6 +149,8 @@ pub struct FfmpegOutput {
     child: Option<Child>,
     tx: Option<SyncSender<Vec<u8>>>,
     writer: Option<JoinHandle<()>>,
+    stderr_reader: Option<JoinHandle<()>>,
+    stderr_text: Arc<Mutex<String>>,
     alive: Arc<AtomicBool>,
     flowing: Arc<AtomicBool>,
     dropped: Arc<AtomicU64>,
@@ -163,6 +165,8 @@ impl FfmpegOutput {
             child: None,
             tx: None,
             writer: None,
+            stderr_reader: None,
+            stderr_text: Arc::new(Mutex::new(String::new())),
             alive: Arc::new(AtomicBool::new(false)),
             flowing: Arc::new(AtomicBool::new(false)),
             dropped: Arc::new(AtomicU64::new(0)),
@@ -198,9 +202,19 @@ impl Output for FfmpegOutput {
             .arg(&self.path)
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
+            .stderr(Stdio::piped())
             .spawn()?;
         let mut stdin = child.stdin.take().ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no stdin"))?;
+        let mut stderr = child.stderr.take().ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no stderr"))?;
+        let stderr_text = self.stderr_text.clone();
+        if let Ok(mut text) = stderr_text.lock() { text.clear(); }
+        self.stderr_reader = Some(thread::spawn(move || {
+            let mut bytes = Vec::new();
+            let _ = stderr.read_to_end(&mut bytes);
+            let text = String::from_utf8_lossy(&bytes);
+            let tail = if text.len() > 8192 { &text[text.len()-8192..] } else { &text };
+            if let Ok(mut saved) = stderr_text.lock() { *saved = tail.to_string(); }
+        }));
         // Roughly 64 MB of frames may wait for the encoder before new ones are dropped.
         let depth = (64 * 1024 * 1024 / (width as usize * height as usize * 4).max(1)).clamp(3, 30);
         let (tx, rx) = sync_channel::<Vec<u8>>(depth);
@@ -224,7 +238,15 @@ impl Output for FfmpegOutput {
 
     fn push_video(&mut self, frame: &Frame) -> io::Result<()> {
         if !self.alive.load(Ordering::Relaxed) {
-            return Err(io::Error::new(io::ErrorKind::BrokenPipe, "ffmpeg stopped (disk full?)"));
+            if let Some(mut child) = self.child.take() { let _ = child.wait(); }
+            if let Some(reader) = self.stderr_reader.take() { let _ = reader.join(); }
+            let detail = self.stderr_text.lock().map(|s| s.trim().to_string()).unwrap_or_default();
+            let message = if detail.is_empty() {
+                "FFmpeg exited unexpectedly; no diagnostic output was provided".to_string()
+            } else {
+                format!("FFmpeg exited: {detail}")
+            };
+            return Err(io::Error::new(io::ErrorKind::BrokenPipe, message));
         }
         match self.tx.as_ref() {
             Some(tx) => match tx.try_send(frame.data.clone()) {
@@ -256,6 +278,7 @@ impl Output for FfmpegOutput {
                 }
             }
         }
+        if let Some(reader) = self.stderr_reader.take() { let _ = reader.join(); }
         self.alive.store(false, Ordering::Relaxed);
         Ok(())
     }
